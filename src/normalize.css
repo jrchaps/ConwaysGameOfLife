@@ -1,0 +1,50 @@
+html {
+	line-height: 1.15; /* Correct the line height in all browsers. */
+	-webkit-text-size-adjust: 100%; /* Prevent adjustments of font size after orientation changes in iOS. */
+}
+
+strong {
+	font-weight: bolder; /* Add the correct font weight in Chrome, Edge, and Safari. */
+}
+
+small {
+	font-size: 80%; /* Add the correct font size in all browsers. */
+}
+
+/* Prevent `sub` and `sup` elements from affecting the line height in all browsers. */
+sub,
+sup {
+	font-size: 75%;
+	line-height: 0;
+	position: relative;
+	vertical-align: baseline;
+}
+
+sub {
+	bottom: -0.25em;
+}
+
+sup {
+	top: -0.5em;
+}
+
+/* Change the font styles in all browsers. */
+button,
+input,
+optgroup,
+select,
+textarea {
+	font-family: inherit;
+	font-size: 100%;
+	line-height: 1.15;
+	margin: 0; /* Remove the margin in Firefox and Safari. */
+}
+
+button,
+select {
+	text-transform: none; /* Remove the inheritance of text transform in Edge, Firefox, and IE. */
+}
+
+button {
+	-webkit-appearance: button; /* Correct the inability to style clickable types in iOS and Safari. */
+}
