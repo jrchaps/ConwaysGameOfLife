@@ -1,114 +1,165 @@
 <!DOCTYPE html>
 <html lang="en" class="themeDark">
+
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
-		<link rel="icon" href="favicon.svg" />
-		<style>
-			/* Seems to be the only way to ensure javascript gets the correct dimensions */
-			#boxCanvas {
-				width: 100%;
-				max-width: 600px;
-				margin: auto;
-				margin-bottom: 3rem;
-			}
-
-			#boxCanvas > div {
-				position: relative;
-				height: 0;
-				padding-bottom: 100%;
-			}
-
-			#boxCanvas canvas {
-				display: block;
-				position: absolute;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				cursor: pointer;
-			}
-		</style>
+		<link rel="icon" href="Glider.png" />
 		<title>Conway's Game of Life</title>
 	</head>
+
 	<body>
 		<h1>Conway's Game of Life</h1>
-		<div id="boxSwitches">
-			<div class="boxSwitch">
-				<svg id="sun" viewBox="0 0 32 32">
+		<!-- Switches -->
+		<div>
+			<div>
+				<svg viewBox="0 0 32 32">
 					<path
 						d="M16 25.1861C21.1003 25.1861 25.2349 21.0515 25.2349 15.9512C25.2349 10.8509 21.1003 6.7163 16 6.7163C10.8997 6.7163 6.76508 10.8509 6.76508 15.9512C6.76508 21.0515 10.8997 25.1861 16 25.1861ZM16 0C15.5363 0 15.1605 0.362265 15.1605 0.831796V4.20543C15.1605 4.66482 15.5499 5.03723 16 5.03723C16.4637 5.03723 16.8395 4.67496 16.8395 4.20543V0.831796C16.8395 0.372408 16.4501 0 16 0ZM27.3137 4.68629C26.9858 4.35843 26.4639 4.34881 26.1319 4.68082L23.7464 7.06634C23.4215 7.39117 23.4336 7.92988 23.7519 8.24815C24.0797 8.57601 24.6017 8.58563 24.9337 8.25362L27.3192 5.8681C27.644 5.54327 27.632 5.00456 27.3137 4.68629ZM32 16C32 15.5363 31.6377 15.1605 31.1682 15.1605H27.7946C27.3352 15.1605 26.9628 15.5499 26.9628 16C26.9628 16.4637 27.325 16.8395 27.7946 16.8395H31.1682C31.6276 16.8395 32 16.4501 32 16ZM27.3137 27.3137C27.6416 26.9858 27.6512 26.4639 27.3192 26.1319L24.9337 23.7464C24.6088 23.4215 24.0701 23.4336 23.7519 23.7519C23.424 24.0797 23.4144 24.6017 23.7464 24.9337L26.1319 27.3192C26.4567 27.644 26.9954 27.632 27.3137 27.3137ZM16 32C16.4637 32 16.8395 31.6377 16.8395 31.1682V27.7946C16.8395 27.3352 16.4501 26.9628 16 26.9628C15.5363 26.9628 15.1605 27.325 15.1605 27.7946V31.1682C15.1605 31.6276 15.5499 32 16 32ZM4.68629 27.3137C5.01415 27.6416 5.53609 27.6512 5.8681 27.3192L8.25362 24.9337C8.57846 24.6088 8.56642 24.0701 8.24815 23.7519C7.92029 23.424 7.39835 23.4144 7.06634 23.7464L4.68082 26.1319C4.35598 26.4567 4.36802 26.9954 4.68629 27.3137ZM0 16C0 16.4637 0.362265 16.8395 0.831796 16.8395H4.20543C4.66482 16.8395 5.03723 16.4501 5.03723 16C5.03723 15.5363 4.67496 15.1605 4.20543 15.1605H0.831796C0.372408 15.1605 0 15.5499 0 16ZM4.68629 4.68629C4.35843 5.01415 4.34881 5.53609 4.68082 5.8681L7.06634 8.25362C7.39117 8.57846 7.92988 8.56642 8.24815 8.24815C8.57601 7.92029 8.58563 7.39835 8.25362 7.06634L5.8681 4.68082C5.54327 4.35598 5.00456 4.36802 4.68629 4.68629Z"
 					/>
 				</svg>
-				<div id="switchTheme" class="switch on">
-					<div class="switchThumb"></div>
+				<div
+					id="themeSwitch"
+					class="on"
+				>
+					<div></div>
 				</div>
-				<svg id="moon" viewBox="0 0 29 32">
-					<path d="M0.516129 26.3226C7.92723 26.3226 13.9355 20.3143 13.9355 12.9032C13.9355 7.74503 10.4625 3.27845 6.19355 1.03226C7.94632 0.373161 10.4041 0 12.3871 0C21.2237 0 28.3871 7.16335 28.3871 16C28.3871 24.8366 21.2237 32 12.3871 32C7.48129 32 2.93523 29.7987 0 26.3226C0.11871 26.3257 0.396387 26.3226 0.516129 26.3226Z" />
+				<svg viewBox="0 0 29 32">
+					<path
+						d="M0.516129 26.3226C7.92723 26.3226 13.9355 20.3143 13.9355 12.9032C13.9355 7.74503 10.4625 3.27845 6.19355 1.03226C7.94632 0.373161 10.4041 0 12.3871 0C21.2237 0 28.3871 7.16335 28.3871 16C28.3871 24.8366 21.2237 32 12.3871 32C7.48129 32 2.93523 29.7987 0 26.3226C0.11871 26.3257 0.396387 26.3226 0.516129 26.3226Z"
+					/>
 				</svg>
 			</div>
-			<div class="boxSwitch">
-				Grid
-				<div id="switchGrid" class="switch on">
-					<div class="switchThumb"></div>
+			<div>
+				<span>Grid</span>
+				<div
+					id="gridSwitch"
+					class="on"
+				>
+					<div></div>
 				</div>
 			</div>
 		</div>
-		<div id="boxCanvas">
+		<!-- Canvas -->
+		<div>
 			<div>
 				<canvas></canvas>
 			</div>
 		</div>
-		<div id="boxControls">
-			<button id="btnPlay" class="btnControl">PLAY</button>
-			<button id="btnStep" class="btnControl">STEP</button>
-			<button id="btnClear" class="btnControl">CLEAR</button>
+		<!-- Controls -->
+		<div>
+			<button id="playBtn">PLAY</button>
+			<button id="stepBtn">STEP</button>
+			<button id="clearBtn">CLEAR</button>
 		</div>
-		<div id="boxInput">
+		<!-- Input -->
+		<div>
 			Speed (ms)
-			<input id="input" type="text" spellcheck="false" value="110" />
-			<!-- The initial value of this input is set in JavaScript to be ms per generation step -->
+			<input
+				id="speedInput"
+				type="text"
+				spellcheck="false"
+			/>
 		</div>
-		<div id="sliderSpeed" class="slider">
-			<div class="sliderTrack">
-				<div class="sliderTrackFill"></div>
+		<!-- Slider -->
+		<div id="speedSlider">
+			<div>
+				<div></div>
 			</div>
-			<div class="sliderThumb"></div>
+			<div></div>
 		</div>
-		<div id="boxBtnsShape">
-			<button id="cell" class="btnShape selected">
+		<!-- Shape Buttons -->
+		<div>
+			<button
+				id="cellBtn"
+				class="selected"
+			>
 				CELL
-				<svg viewBox="0 0 30 31" class="svgShape">
-					<rect width="30" height="30.9013" />
+				<svg viewBox="0 0 30 31">
+					<rect
+						width="30"
+						height="30.9013"
+					/>
 				</svg>
 			</button>
-			<button id="blinker" class="btnShape">
+			<button id="blinkerBtn">
 				BLINKER
-				<svg viewBox="0 0 30 105" class="svgShape">
-					<rect y="73.8025" width="30" height="30.9013" />
-					<rect y="36.9012" width="30" height="30.9013" />
-					<rect width="30" height="30.9013" />
+				<svg viewBox="0 0 30 105">
+					<rect
+						y="73.8025"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						y="36.9012"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						width="30"
+						height="30.9013"
+					/>
 				</svg>
 			</button>
-			<button id="glider" class="btnShape">
+			<button id="gliderBtn">
 				GLIDER
-				<svg viewBox="0 0 102 105" class="svgShape">
-					<rect x="36" width="30" height="30.9013" />
-					<rect x="72" y="37" width="30" height="30.9013" />
-					<rect x="72" y="74" width="30" height="30.9013" />
-					<rect x="36" y="74" width="30" height="30.9013" />
-					<rect y="74" width="30" height="30.9013" />
+				<svg viewBox="0 0 102 105">
+					<rect
+						x="36"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						x="72"
+						y="37"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						x="72"
+						y="74"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						x="36"
+						y="74"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						y="74"
+						width="30"
+						height="30.9013"
+					/>
 				</svg>
 			</button>
-			<button id="block" class="btnShape">
+			<button id="blockBtn">
 				BLOCK
-				<svg viewBox="0 0 66 68" class="svgShape">
-					<rect x="36" width="30" height="30.9013" />
-					<rect width="30" height="30.9013" />
-					<rect x="36" y="37.0815" width="30" height="30.9013" />
-					<rect y="37.0815" width="30" height="30.9013" />
+				<svg viewBox="0 0 66 68">
+					<rect
+						x="36"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						x="36"
+						y="37.0815"
+						width="30"
+						height="30.9013"
+					/>
+					<rect
+						y="37.0815"
+						width="30"
+						height="30.9013"
+					/>
 				</svg>
 			</button>
 		</div>
 	</body>
+
 </html>

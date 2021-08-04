@@ -3,16 +3,14 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const dev = 0;
 
 module.exports = {
-	mode: dev ? 'development' : 'production',
 	entry: {
 		main: './src/main.ts',
 	},
 	output: {
 		path: path.resolve(__dirname, './build'),
-		filename: '[contenthash].js',
+		filename: '[name].js',
 		publicPath: '',
 	},
 	devServer: {
@@ -33,8 +31,13 @@ module.exports = {
 				use: ['html-loader'],
 			},
 			{
-				test: /\.css$/i,
-				use: [MiniCssExtractPlugin.loader, 'css-loader', { loader: 'postcss-loader', options: { postcssOptions: { plugins: [['postcss-preset-env']] } } }],
+				test: /\.s[ac]ss$/i,
+				use: [
+					MiniCssExtractPlugin.loader,
+					'css-loader',
+					{ loader: 'postcss-loader', options: { postcssOptions: { plugins: [['postcss-preset-env']] } } },
+					'sass-loader',
+				],
 			},
 			{
 				test: /\.ts?$/,
@@ -58,4 +61,5 @@ module.exports = {
 	resolve: {
 		extensions: ['.ts', '.js'],
 	},
-};
+}
+

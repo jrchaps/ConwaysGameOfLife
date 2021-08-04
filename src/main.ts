@@ -1,252 +1,337 @@
-import './main.css';
-import './favicon.svg';
+import './main.scss'
+import './Glider.png'
 
-// undefined = dead, 1 = alive
-let gen: number[][] | undefined[][] = [];
+/*
+	If you are used to libraries like React, Angular, Vue, ect. then this code will probably look unfamiliar/weird.
+	HTML is written in a separate file.
 
-const rows = 15;
-const columns = 15;
+	The basic structure of this file is written as:
+		- Program state/DOM elements
+		- Element event handlers
+		- Main update function
+		- Utility functions
 
-let shape = 'cell';
+	The DOM isn't updated directly by event handlers. Instead, event handlers generally change state values, 
+	then the update occurs in the update function. This is similar in concept to how React updates the DOM. 
+	I think there are benefits to doing it this way. The difference is that there's no additional library 
+	required for this approach, I'm simply using built in browser API's. Also, It's very clear how the updates
+	actually occur, and the programmer has full control over how it's done.
+*/
 
-let gamePlaying = false;
-let msUntilStep = 0;
-let msPerStep = 110;
+/*
+	TODO:
+		Fix bug when entering a non-number into the input causes the game to pause, but then entering a number doesn't resume the game
+*/
 
-const canvas = document.querySelector('canvas')!;
-const ctx = canvas.getContext('2d')!;
+type Btn = HTMLButtonElement
+type Div = HTMLDivElement
+type Input = HTMLInputElement
+type Canvas = HTMLCanvasElement
+let { documentElement, body } = document
+let { pow, floor, round, min } = Math
 
-let gridOn = true;
-let gridRed = 255;
-let gridGreen = 255;
-let gridBlue = 255;
-let gridAlpha = 0;
-const gridAnimationDuration = 200;
+interface v2 { x: number, y: number }
 
-let timestampPrev: number;
+interface Shape {
+	btn: Btn
+	v2s: v2[]
+}
 
-genInit();
+const cell = {
+	btn: elSelect<Btn>('#cellBtn'),
+	v2s: []
+}
 
-canvasContextSet();
-window.addEventListener('resize', canvasContextSet);
+const blinker = {
+	btn: elSelect<Btn>('#blinkerBtn'),
+	v2s: [
+		{ x: 0, y: -1 }, { x: 0, y: 1 }
+	]
+}
 
-window.requestAnimationFrame(gameLoop);
+const glider = {
+	btn: elSelect<Btn>('#gliderBtn'),
+	v2s: [
+		{ x: 1, y: 1 }, { x: 1, y: 2 },
+		{ x: 0, y: 2 }, { x: -1, y: 2 }
+	]
+}
 
-function gameLoop(timestamp: number) {
-	if (!timestampPrev) timestampPrev = timestamp;
-	const timeDelta = timestamp - timestampPrev;
+const block = {
+	btn: elSelect<Btn>('#blockBtn'),
+	v2s: [
+		{ x: 1, y: 0 }, { x: 1, y: 1 },
+		{ x: 0, y: 1 }
+	]
+}
 
-	if (gamePlaying) {
-		msUntilStep -= timeDelta;
-		if (msUntilStep <= 0) {
-			genStep();
-			msUntilStep = msPerStep;
+const shapes = [cell, blinker, glider, block]
+
+const canvas = elSelect<Canvas>('canvas')
+const ctx = canvas.getContext('2d')!
+
+const themeSwitch = elSelect<Div>('#themeSwitch')
+const gridSwitch = elSelect<Div>('#gridSwitch')
+
+const playBtn = elSelect<Btn>('#playBtn')
+const stepBtn = elSelect<Btn>('#stepBtn')
+const clearBtn = elSelect<Btn>('#clearBtn')
+
+const speedSlider = {
+	rootEl: elSelect<Div>('#speedSlider'),
+	track: elSelect<Div>('#speedSlider > div:nth-of-type(1)'),
+	trackFill: elSelect<Div>('#speedSlider > div:nth-of-type(1) div'),
+	thumb: elSelect<Div>('#speedSlider > div:nth-of-type(2)'),
+	from: 200,
+	to: 10,
+	engaged: false,
+}
+
+const speedInput = elSelect<Input>('#speedInput')
+
+const n = 15 // Square matrix side length.
+const gen = {
+	cells: arrayInit(pow(n, 2), false),
+	n
+}
+
+const cellNeighbors = [
+	{ x: -1, y: -1 }, { x: 0, y: -1 },
+	{ x: 1, y: -1 }, { x: -1, y: 0 },
+	{ x: 1, y: 0 }, { x: -1, y: 1 },
+	{ x: 0, y: 1 }, { x: 1, y: 1 },
+]
+
+let pointerEv: PointerEvent
+
+let shape: Shape = cell
+
+let paused = true
+let wasPaused = paused
+
+// All time values are milliseconds by default.
+// Save the timestamp from the previous frame to calculate the time delta between frames.
+let timestampPrev = 0
+let tPerNewGen = floor((speedSlider.from + speedSlider.to) / 2)
+let tUntilNewGen = tPerNewGen
+
+let themeDark = true
+let gridOn = true
+
+// Event handlers
+onpointermove = (ev) => { pointerEv = ev }
+onpointerup = () => { speedSlider.engaged = false }
+
+themeSwitch.onclick = () => { themeDark = !themeDark }
+gridSwitch.onclick = () => { gridOn = !gridOn }
+
+cell.btn.onclick = () => { shape = cell }
+blinker.btn.onclick = () => { shape = blinker }
+glider.btn.onclick = () => { shape = glider }
+block.btn.onclick = () => { shape = block }
+
+playBtn.onclick = () => { paused = !paused }
+stepBtn.onclick = () => { tUntilNewGen = 0 }
+clearBtn.onclick = () => { gen.cells = arrayInit(pow(gen.n, 2), false) }
+
+speedSlider.rootEl.onpointerdown = () => { speedSlider.engaged = true }
+speedInput.oninput = () => { tPerNewGen = parseFloat(speedInput.value) }
+
+canvas.onclick = (ev) => {
+	const { cells, n } = gen
+	let origin = {
+		x: floor(xOffset(ev, canvas) * n / canvas.width),
+		y: floor(yOffset(ev, canvas) * n / canvas.height),
+	}
+	let i = v2ToIndex(origin, n)
+	cells[i] = !cells[i]
+	if (cells[i]) {
+		for (let v2 of shape.v2s) {
+			v2 = v2Add(v2, origin)
+			if (v2InBounds(v2, n)) cells[v2ToIndex(v2, n)] = true
 		}
 	}
+}
 
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
+function update(timestamp: number) {
+	if (!timestampPrev) timestampPrev = timestamp
+	const tDelta = timestamp - timestampPrev
+	timestampPrev = timestamp
 
-	const cells = new Path2D();
-	for (let i = 0; i < rows; i++) {
-		for (let j = 0; j < columns; j++) {
-			if (gen[i][j]) cells.rect(cellWidth() * j, cellHeight() * i, cellWidth(), cellHeight());
+	// Text content is intentionally used here for multiple reasons. For one, it prevents re-flow.
+	// https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent#differences_from_innertext
+	if (!paused) {
+		if (paused !== wasPaused) {
+			wasPaused = paused
+			tUntilNewGen = 0
+		} else tUntilNewGen -= tDelta
+		playBtn.textContent = 'PAUSE'
+	} else playBtn.textContent = 'PLAY'
+
+	// Another way to do this is to have a previous shape value, and check if it has changed.
+	for (let s of shapes) {
+		if (s !== shape) classRemove(s.btn, 'selected')
+		else classInsert(shape.btn, 'selected')
+	}
+
+	{
+		// Update slider
+		let { rootEl, track, trackFill, thumb,
+			to, from, engaged } = speedSlider
+		let { width } = track.getBoundingClientRect()
+		let offset: number
+
+		if (engaged) {
+			classInsert(body, 'sliderEngaged')
+			offset = clamp(xOffset(pointerEv, track), 0, width)
+			tPerNewGen = round((to - from) / width * offset + from)
+		} else {
+			classRemove(body, 'sliderEngaged')
+			offset = width / (to - from) * (tPerNewGen - from)
+			offset = clamp(offset, 0, width)
 		}
-	}
-	ctx.fill(cells);
 
-	const grid = new Path2D();
-	for (let xPos = ctx.lineWidth / 2; xPos < canvas.width; xPos += (canvas.width - ctx.lineWidth) / columns) {
-		grid.moveTo(xPos, 0);
-		grid.lineTo(xPos, canvas.height);
-	}
-	for (let yPos = ctx.lineWidth / 2; yPos < canvas.height; yPos += (canvas.height - ctx.lineWidth) / rows) {
-		grid.moveTo(0, yPos);
-		grid.lineTo(canvas.width, yPos);
+		let em = `${offset / parseFloat(getComputedStyle(rootEl).fontSize)}em`
+		thumb.style.left = em; trackFill.style.width = em
 	}
 
-	const themeDark = document.documentElement.classList.contains('themeDark');
-	gridRed = animationStep(gridRed, timeDelta, gridAnimationDuration, 24, 244, themeDark);
-	gridGreen = animationStep(gridGreen, timeDelta, gridAnimationDuration, 24, 244, themeDark);
-	gridBlue = animationStep(gridBlue, timeDelta, gridAnimationDuration, 24, 244, themeDark);
-	gridAlpha = animationStep(gridAlpha, timeDelta, gridAnimationDuration, 0, 1, gridOn);
+	if (Number.isNaN(tPerNewGen)) speedInput.value = ''
+	else speedInput.value = `${tPerNewGen}`
 
-	ctx.strokeStyle = `rgba(${gridRed},${gridGreen},${gridBlue},${gridAlpha})`;
-
-	ctx.stroke(grid);
-
-	timestampPrev = timestamp;
-
-	window.requestAnimationFrame(gameLoop);
-}
-
-function genInit() {
-	for (let i = 0; i < rows; i++) {
-		gen[i] = [];
-	}
-}
-
-function genStep() {
-	let nextGen: number[][] | undefined[][] = [];
-	for (let i = 0; i < rows; i++) {
-		nextGen[i] = [];
-		for (let j = 0; j < columns; j++) {
-			const nbors = [
-				[i - 1, j - 1],
-				[i - 1, j],
-				[i - 1, j + 1],
-				[i, j - 1],
-				[i, j + 1],
-				[i + 1, j - 1],
-				[i + 1, j],
-				[i + 1, j + 1],
-			];
-			let nborsAlive = 0;
-			for (const nbor of nbors) {
-				if (gen[nbor[0]] && gen[nbor[0]][nbor[1]]) nborsAlive++;
-			}
-
-			if (nborsAlive === 3 || (gen[i][j] && nborsAlive === 2)) {
-				nextGen[i][j] = 1;
-			}
+	const { cells, n } = gen
+	// Create a new generation of cells
+	let genNew: boolean[] = []
+	for (let i = 0; i < cells.length; i++) {
+		let origin = indexToV2(i, n)
+		let alive = 0
+		for (let v2 of cellNeighbors) {
+			v2 = v2Add(v2, origin)
+			if (v2InBounds(v2, n) && cells[v2ToIndex(v2, n)]) alive++
 		}
-	}
-	gen = nextGen;
-}
-
-function shapesSpawn(i: number, j: number) {
-	let coords: [number, number][] = [];
-
-	if (gen[i][j]) {
-		gen[i][j] = 0;
-	} else if (shape === 'cell') {
-		coords = [[i, j]];
-	} else if (shape === 'blinker') {
-		coords = [
-			[i, j],
-			[i - 1, j],
-			[i + 1, j],
-		];
-	} else if (shape === 'glider') {
-		coords = [
-			[i, j],
-			[i + 1, j + 1],
-			[i + 2, j + 1],
-			[i + 2, j],
-			[i + 2, j - 1],
-		];
-	} else if (shape === 'block') {
-		coords = [
-			[i, j],
-			[i, j + 1],
-			[i + 1, j + 1],
-			[i + 1, j],
-		];
+		if (alive === 3 || (cells[i] && alive === 2)) genNew[i] = true
+		else genNew[i] = false
 	}
 
-	for (const coord of coords) {
-		if (coord[0] >= 0 && coord[0] < rows && coord[1] >= 0 && coord[1] < columns) {
-			gen[coord[0]][coord[1]] = 1;
+	if (tUntilNewGen <= 0) {
+		tUntilNewGen = tPerNewGen
+		gen.cells = genNew
+	}
+
+	canvas.width = min(body.getBoundingClientRect().width, 602)
+	canvas.height = canvas.width
+
+	ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+	ctx.lineWidth = 1
+	ctx.fillStyle = 'rgba(255, 102, 103, 1)'
+
+	{
+		let alpha = 1
+		let grey = 244
+
+		if (gridOn) {
+			classInsert(gridSwitch, 'on')
+		} else {
+			classRemove(gridSwitch, 'on')
+			alpha = 0
 		}
+		if (themeDark) {
+			classInsert(documentElement, 'themeDark')
+			classInsert(themeSwitch, 'on')
+		} else {
+			classRemove(documentElement, 'themeDark')
+			classRemove(themeSwitch, 'on')
+			grey = 24
+		}
+
+		ctx.strokeStyle = `rgba(${grey},${grey},${grey},${alpha})`
 	}
-}
 
-function gameToggle() {
-	gamePlaying = !gamePlaying;
-	msUntilStep = 0;
-}
+	const { lineWidth } = ctx
+	let cellLength = floor((canvas.width - ctx.lineWidth * 2) / n)
+	let boardLength = cellLength * n + ctx.lineWidth * 2
+	let boardOrigin = floor((canvas.width - boardLength) / 2)
 
-const cellWidth = () => canvas.width / columns;
-const cellHeight = () => canvas.height / rows;
-
-function canvasContextSet() {
-	// Use dimensions and base the canvas dimensions off those values to prevent CLS.
-	// Should this be ran after the window load event? It seems sometimes the javascript is executing before CSS in Chrome.
-	canvas.width = canvas.getBoundingClientRect().width;
-	canvas.height = canvas.getBoundingClientRect().width;
-	ctx.fillStyle = '#ff5050';
-	ctx.lineWidth = 2;
-}
-
-function gridToggle() {
-	gridOn = !gridOn;
-}
-
-function themeToggle() {
-	document.documentElement.classList.toggle('themeDark');
-}
-
-function animationStep(value: number, timeElapsed: number, animationDuration: number, from: number, to: number, stepForward = true) {
-	if (stepForward) {
-		return Math.min(value + (timeElapsed / animationDuration) * (to - from), to);
-	} else {
-		return Math.max(value - (timeElapsed / animationDuration) * (to - from), from);
+	ctx.save()
+	ctx.translate(boardOrigin, boardOrigin)
+	// Draw border
+	rectStroke(ctx, v2Init(lineWidth / 2), boardLength - lineWidth)
+	// Draw cells
+	for (let i = 0; i < cells.length; i++) {
+		let v2 = indexToV2(i, n)
+		v2 = v2Scale(v2, cellLength)
+		v2 = v2Add(v2, v2Init(lineWidth))
+		if (cells[i]) rectFill(ctx, v2, cellLength)
+		v2 = v2Add(v2, v2Init(lineWidth / 2))
+		rectStroke(ctx, v2, cellLength - lineWidth)
 	}
+	ctx.restore()
+
+	requestAnimationFrame(update)
 }
 
-//Canvas interation
-
-canvas.addEventListener('click', canvasOnClick);
-function canvasOnClick(ev: MouseEvent) {
-	const i = Math.floor((ev.clientY - canvas.getBoundingClientRect().top) / cellHeight());
-	const j = Math.floor((ev.clientX - canvas.getBoundingClientRect().left) / cellWidth());
-	shapesSpawn(i, j);
+function arrayInit<T>(length: number, value: T) {
+	let arr = []
+	for (let i = 0; i < length; i++) arr[i] = value
+	return arr
 }
 
-// Shape buttons
-
-for (const btn of document.querySelectorAll<HTMLButtonElement>('.btnShape')) {
-	btn.addEventListener('click', shapeButtonOnClick);
-}
-function shapeButtonOnClick(this: HTMLButtonElement) {
-	document.querySelector<HTMLButtonElement>(`#${shape}`)!.classList.remove('selected');
-	this.classList.add('selected');
-	shape = this.id;
+function clamp(value: number, min: number, max: number) {
+	if (value < min) return min
+	if (value > max) return max
+	return value
 }
 
-//Game Controls
-
-document.querySelector<HTMLButtonElement>('#btnPlay')!.addEventListener('click', playButtonOnClick);
-function playButtonOnClick(this: HTMLButtonElement) {
-	if (this.innerText === 'PLAY') {
-		this.innerText = 'PAUSE';
-	} else {
-		this.innerText = 'PLAY';
-	}
-	gameToggle();
+function v2Init(x: number, y = x) {
+	return { x, y }
 }
 
-document.querySelector<HTMLButtonElement>('#btnStep')!.addEventListener('click', genStep);
-document.querySelector<HTMLButtonElement>('#btnClear')!.addEventListener('click', genInit);
-
-//Switches
-
-for (const swtch of document.querySelectorAll<HTMLDivElement>('.switch')) {
-	swtch.addEventListener('click', switchOnClick);
-}
-function switchOnClick(this: HTMLDivElement) {
-	this.classList.toggle('on');
+function v2Add(a: v2, b: v2) {
+	return { x: a.x + b.x, y: a.y + b.y }
 }
 
-document.querySelector<HTMLDivElement>('#switchTheme')!.addEventListener('click', themeToggle);
-document.querySelector<HTMLDivElement>('#switchGrid')!.addEventListener('click', gridToggle);
-
-import { Slider, sliderEnable, sliderMove } from './slider';
-
-const sliderEl = document.querySelector<HTMLDivElement>('#sliderSpeed')!;
-
-function sliderOnDrag(slider: Slider, sliderValue: number) {
-	const value = slider.max + slider.min - Math.round(sliderValue);
-	msPerStep = value;
-	input.value = `${value}`;
+function v2Scale({ x, y }: v2, scalar: number) {
+	return { x: x * scalar, y: y * scalar }
 }
 
-const slider = sliderEnable(sliderEl, 20, 200, sliderOnDrag);
+function v2InBounds({ x, y }: v2, cols: number, rows = cols) {
+	return (x >= 0 && x < cols && y >= 0 && y < rows)
+}
 
-const input = document.querySelector<HTMLInputElement>('#input')!;
-input.addEventListener('input', function () {
-	const value = parseFloat(this.value);
-	if (!Number.isNaN(value)) {
-		msPerStep = value;
-		sliderMove(slider, slider.max + slider.min - value);
-	}
-});
+function v2ToIndex({ x, y }: v2, cols: number) {
+	return cols * y + x
+}
+
+function indexToV2(i: number, cols: number) {
+	return { x: i % cols, y: floor(i / cols) }
+}
+
+function xOffset(ev: MouseEvent, el: HTMLElement): number {
+	return ev.clientX - el.getBoundingClientRect().x
+}
+
+function yOffset(ev: MouseEvent, el: HTMLElement): number {
+	return ev.clientY - el.getBoundingClientRect().y
+}
+
+function elSelect<T extends Element>(selector: string, node: ParentNode = document) {
+	return node.querySelector<T>(selector)!
+}
+
+function rectFill(ctx: CanvasRenderingContext2D, { x, y }: v2, width: number, height = width) {
+	ctx.fillRect(x, y, width, height)
+}
+
+function rectStroke(ctx: CanvasRenderingContext2D, { x, y }: v2, width: number, height = width) {
+	ctx.strokeRect(x, y, width, height)
+}
+
+function classInsert(el: Element, clss: string) {
+	el.classList.add(clss)
+}
+
+function classRemove(el: Element, clss: string) {
+	el.classList.remove(clss)
+}
+
+requestAnimationFrame(update)

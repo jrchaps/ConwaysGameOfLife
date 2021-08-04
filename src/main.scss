@@ -1,0 +1,245 @@
+:root {
+	--color0: rgba(255, 102, 103, 1);
+	--color1: rgba(226, 226, 226, 1);
+	--color2: rgba(244, 244, 244, 1);
+	--color3: rgba(24, 24, 24, 1);
+	--bodyColor: var(--color2);
+	--textColor: var(--color3);
+
+	&.themeDark {
+		--bodyColor: var(--color3);
+		--textColor: var(--color2);
+	}
+
+	@media (max-width: 560px) { font-size: 14px; }
+	@media (max-width: 490px) { font-size: 12px; }
+	@media (max-width: 420px) { font-size: 10px; }
+	@media (max-width: 350px) { font-size: 8px; }
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	color: var(--textColor);
+	-webkit-tap-highlight-color: transparent;
+}
+
+button {
+	color: var(--color3);
+	border: none;
+	outline: none;
+	cursor: pointer;
+	font-size: 100%;
+}
+
+h1 { 
+	font-size: 4rem; 
+	font-weight: normal;
+}
+
+body {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin: min(5%, 3rem);
+	background: var(--bodyColor);
+	font-family: sans-serif;
+	text-align: center;
+
+	&.sliderEngaged { user-select: none; }
+	&.sliderEngaged * { cursor: pointer; }
+	& > * { margin-bottom: 3rem; }
+	& > :last-child { margin-bottom: 0; }
+
+	//Switches
+	& > div:nth-of-type(1) {
+		display: flex;
+		justify-content: space-between;
+		width: 100%;
+		max-width: 600px;
+		
+		svg {
+			width: 1.82em;
+			height: 1.82em;
+			fill: var(--textColor);
+		}
+
+		& > div {
+			display: flex;
+			align-items: center;
+			font-size: 1.1rem;
+
+			& > * + * {
+				margin-left: 2.16em;
+			}
+
+			& > div {
+				// Switch
+				--trackWidth: 4.26em;
+				--trackHeight: 2.05em;
+				--trackColor: var(--color1);
+				--thumbDiameter: 1.25em;
+				--thumbColor: var(--color2);
+				width: var(--trackWidth);
+				height: var(--trackHeight);
+				border-radius: calc(var(--trackHeight) / 2);
+				background: var(--trackColor);
+				cursor: pointer;
+
+				// Thumb
+				& > div {
+					position: relative;
+					$offset: calc((var(--trackHeight) - var(--thumbDiameter)) / 2) ;
+					left: $offset;
+					top: $offset;
+					width: var(--thumbDiameter);
+					height: var(--thumbDiameter);
+					border-radius: 50%;
+					background: var(--thumbColor);
+					box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.6);;
+				}
+
+				&.on > div {
+					left: calc(var(--trackWidth) - var(--thumbDiameter) - (var(--trackHeight) - var(--thumbDiameter)) / 2);
+				}
+			}
+		}
+
+		// Grid Switch
+		& > div:nth-of-type(2) > div.on {
+			background: var(--color0);
+		}
+	}
+
+	// Canvas
+	& > div:nth-of-type(2) {
+		width: 100%;
+		max-width: 602px;
+
+		& > div {
+			position: relative;
+    		padding-bottom: 100%;
+
+			canvas {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				cursor: pointer;
+			}
+		}
+	}
+
+	// Controls
+	& > div:nth-of-type(3) {
+		font-size: 1.1rem;
+		display: flex;
+		justify-content: space-between;
+		width: 19.1em;
+
+		button {
+			width: 5.45em;
+			padding: 0.9em;
+			background: var(--color0);
+			&:active { background: rgba(255, 102, 103, 0.5); }
+		}
+	}
+
+	// Input
+	& > div:nth-of-type(4) {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 1.25em;
+		/* width of the slider */
+		width: calc(15.625rem + 1.5625rem);	
+
+		input {
+			--padding: 0.6em;
+			font-size: 1.25rem;
+			width: calc(5ch + var(--padding) * 2);
+			padding: var(--padding);
+			border: none;
+			outline: none;
+			color: var(--color3);
+			background: var(--color2);
+			border: 1px solid var(--color3);
+		}
+	}
+
+	& > div:nth-of-type(5) {
+		// Slider
+		--trackWidth: 20.625rem;
+		--trackHeight: 0.3125rem;
+		--trackBorderRadius: 0.15rem;
+		--trackColor: rgba(255, 132, 132, 0.5);
+		--fillColor: var(--color0);
+		--thumbDiameter: 1.8rem;
+		--thumbColor: var(--color2);
+		--value: calc(var(--trackWidth) * 0.5);
+		width: calc(var(--trackWidth) + var(--thumbDiameter));
+		height: var(--thumbDiameter);
+		cursor: pointer;
+		touch-action: none;
+
+		// Track
+		& > div:nth-of-type(1) {
+			position: relative;
+			top: calc((var(--thumbDiameter) - var(--trackHeight)) / 2);
+			width: var(--trackWidth);
+			height: var(--trackHeight);
+			border-radius: var(--trackBorderRadius);
+			background: var(--trackColor);
+			margin: auto;
+
+			// Fill
+			div {
+				width: var(--value);
+				height: 100%;
+				border-radius: var(--trackBorderRadius);
+				background: var(--fillColor);
+			}
+		}
+
+		// Thumb
+		& > div:nth-of-type(2) {
+			position: relative;
+			bottom: var(--trackHeight);
+			left: var(--value);
+			width: var(--thumbDiameter);
+			height: var(--thumbDiameter);
+			border-radius: 50%;
+			background: var(--thumbColor);
+			box-shadow: 0 0 2px 1px rgba(0, 0, 0, 0.6);
+		}
+	}
+
+	// Shape Buttons
+	& > div:nth-of-type(6) {
+		font-size: 1.1rem;
+		display: flex;
+		justify-content: space-between;
+		width: 28.25em;
+
+		 button {
+			width: 6.5em;
+			padding: 1.1em;
+			background: var(--color2);
+			border: 1px solid var(--color3);
+
+			&:active,
+			&.selected {
+				background: var(--color0);
+			}
+
+			svg {
+				width: 2em;
+				height: 2em;
+				margin: 2em auto 0;
+				fill: var(--color3);			
+			}
+		 }
+	}
+}
+
